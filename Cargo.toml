@@ -1,0 +1,25 @@
+[package]
+name = "grep"
+version = "0.1.0"
+authors = ["balanced <ifeelbalanced@gmail.com>"]
+edition = "2021"
+description = "A command line tool that will interact with input/output to files and the command line."
+#documentation = "https://github.com/zaszi/rust-template"
+readme = "README.md"
+homepage = "https://github.com/ifeelBALANCED/grep"
+repository = "https://github.com/ifeelBALANCED/grep"
+license-file = "LICENSE"
+keywords = ["grep", "rust"]
+categories = ["rust-patterns", "grep"]
+publish = false
+
+[features]
+default = []
+
+[dependencies]
+
+[dev-dependencies]
+
+[profile.release]
+lto = true
+panic = "abort"
