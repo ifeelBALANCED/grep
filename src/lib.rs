@@ -9,13 +9,14 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn build(args: &[String]) -> Result<Self, &'static str> {
-        if args.len() < 3 {
-            return Err("not enough arguments");
-        }
+    pub fn build(mut args: impl Iterator<Item = String>) -> Result<Self, &'static str> {
+        args.next();
 
-        let query = args[1].clone();
-        let file_path = args[2].clone();
+        let (query, file_path) = match (args.next(), args.next()) {
+            (Some(query), Some(file_path)) => (query, file_path),
+            _ => return Err("not enough arguments"),
+        };
+
         let ignore_case = env::var("IGNORE_CASE").is_ok();
 
         Ok(Self { query, file_path, ignore_case })
@@ -30,7 +31,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     } else {
         search_case_sensitive(&config.query, &contents)
     };
-    
+
     for line in search_lines {
         println!("{}", line);
     }
@@ -38,54 +39,58 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn search<'a, F>(query: &str, contents: &'a str, processor: F) -> Vec<&'a str>
-    where
-        F: Fn(&str) -> String,
-{
-    let query = processor(query);
-
+pub fn search_case_sensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     contents
         .lines()
-        .filter(|line| processor(line).contains(&query))
+        .filter(|line| line.contains(query))
         .collect()
 }
 
-pub fn search_case_sensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    search(query, contents, |s| s.to_string())
-}
-
 pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    search(query, contents, |s| s.to_lowercase())
+    let query = query.to_lowercase();
+    contents
+        .lines()
+        .filter(|line| line.to_lowercase().contains(&query))
+        .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    /// Test that the case-sensitive search function correctly finds a match
     #[test]
     fn case_sensitive() {
+        // Setup
         let query = "duct";
         let contents = "\
-Rust:
-safe, fast, productive.
-Pick three.
-Duct tape.";
+        Rust:
+        safe, fast, productive.
+        Pick three.
+        Duct tape.";
 
-        assert_eq!(vec!["safe, fast, productive."], search_case_sensitive(query, contents));
+        // Action
+        let result = search_case_sensitive(query, contents);
+
+        // Assertion
+        assert_eq!(vec!["safe, fast, productive."], result);
     }
 
+    /// Test that the case-insensitive search function correctly finds a match
     #[test]
     fn case_insensitive() {
+        // Setup
         let query = "rUsT";
         let contents = "\
-Rust:
-safe, fast, productive.
-Pick three.
-Trust me.";
+        Rust:
+        safe, fast, productive.
+        Pick three.
+        Trust me.";
 
-        assert_eq!(
-            vec!["Rust:", "Trust me."],
-            search_case_insensitive(query, contents)
-        );
+        // Action
+        let result = search_case_insensitive(query, contents);
+
+        // Assertion
+        assert_eq!(vec!["Rust:", "Trust me."], result);
     }
 }
